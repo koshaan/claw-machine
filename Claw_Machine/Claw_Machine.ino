@@ -1,4 +1,7 @@
 #include <arduino-timer.h>
+#include <ezButton.h>
+#include <Servo.h>
+
 auto timer = timer_create_default();
 unsigned long previousMillis = 0;
 unsigned long buttonSeqPrevMillis = 0;
@@ -19,11 +22,24 @@ int PWMZ = 6; //Speed control
 int ZIN1 = 7; //Direction
 int ZIN2 = 5; //Direction
 
-#include <ezButton.h>
+//Servo Motor
+int ServoPin = 3;
+// Distances for the grabbing sequence:
+int ServoAngleMax = 145;
+int ServoAngleMin = 10;
+int ServoAngle = 10;
+Servo clawServo;
 
-#define VRX_PIN  A0 
-#define VRY_PIN  A1 
-#define SW_PIN   0 
+//End Switch Pins
+#define ESX0 A2
+#define ESX1 A3
+#define ESY0 A4
+#define ESY1 A5
+
+#define VRX_PIN  A0
+#define VRY_PIN  A1
+#define SW_PIN   0
+int ESArr[4] = {0,0,0,0};
 
 ezButton button(SW_PIN);
 
@@ -34,9 +50,15 @@ int buttonSequence = 0;
 
 void setup(){
   Serial.begin(9600) ;
-  
-  button.setDebounceTime(50); // set debounce time to 50 milliseconds
 
+  pinMode(ESX0, INPUT_PULLUP);
+  pinMode(ESX1, INPUT_PULLUP);
+  pinMode(ESY0, INPUT_PULLUP);
+  pinMode(ESY1, INPUT_PULLUP);
+
+  clawServo.attach(ServoPin, 600, 2350);
+  clawServo.write(ServoAngle);
+  button.setDebounceTime(50); // set debounce time to 50 milliseconds
 }
 
 void loop(){
@@ -48,6 +70,9 @@ void loop(){
   xValue = mapper(analogRead(VRX_PIN));
   yValue = mapper(analogRead(VRY_PIN));
   bValue = button.getState();
+
+  // set ESArr values
+  setEndSwitchValues();
 
   if (button.isPressed()) {
     Serial.println("button sequence init");
@@ -83,9 +108,17 @@ void loop(){
   }
 }
 
-
 void moveMotor(int motor, int speed, int direction){
+  // Hardcoded motor-switch mapping:
+  int sw = -1;
+  if (motor == 0 && direction == 1) sw = 0;
+  else if (motor == 0 && direction == 2) sw = 1;
+  else if (motor == 1 && direction == 1) sw = 2;
+  else if (motor == 1 && direction == 2) sw = 3;
+  // return if switch corresponding to movement direction is pressed.
+  if (sw >= 0 && ESArr[sw]) return;
 
+  
   boolean inPin1 = LOW;
   boolean inPin2 = HIGH;
 
@@ -123,8 +156,9 @@ void runButtonSequence(){
   runMotorTimed(2, 0, 255, 2000);
   
   delay(1000); 
-  // servo.run() // make this worky
-  
+  setClawPos(ServoAngleMax);
+  delay(1000);
+  setClawPos(ServoAngleMin);
   runMotorTimed(2, 1, 255, 2000);
 
   buttonSequence = 0;
@@ -142,4 +176,23 @@ void runMotorTimed(int motor, int dir, int speed, int time){
     endTime = millis();
   } 
   moveMotor(motor, 0, 0);
+}
+
+void setClawPos(int deg){
+  int degDif = deg - ServoAngle;
+  int singleStep = degDif / abs(degDif);
+  for (degDif = abs(degDif); degDif > 0; degDif -= 1) {
+    ServoAngle += singleStep;
+    clawServo.write(ServoAngle);
+    delay(10);
+  }
+}
+
+void setEndSwitchValues(){
+  // set global array of swith values [x0, x1, y0, y1]
+  
+  ESArr[0] = digitalRead(ESX0);
+  ESArr[1] = digitalRead(ESX1);
+  ESArr[2] = digitalRead(ESY0);
+  ESArr[3] = digitalRead(ESY1);
 }
