@@ -55,6 +55,7 @@ void setup(){
   pinMode(ESX1, INPUT_PULLUP);
   pinMode(ESY0, INPUT_PULLUP);
   pinMode(ESY1, INPUT_PULLUP);
+  
 
   clawServo.attach(ServoPin, 600, 2350);
   clawServo.write(ServoAngle);
@@ -78,6 +79,9 @@ void loop(){
     Serial.println("button sequence init");
     buttonSequence = 1;
     runButtonSequence();
+  }
+  else if (Serial.available()) {
+    handleSerialRead();
   }
 
   if(!buttonSequence){
@@ -153,15 +157,17 @@ int mapper(int analogValue){
 }
 
 void runButtonSequence(){
-  moveCarriageToOrigin();
-  /*runMotorTimed(2, 0, 255, 2000);
+  runMotorTimed(2, 0, 255, 10000);
   
   delay(1000); 
   setClawPos(ServoAngleMax);
   delay(1000);
+  runMotorTimed(2, 1, 255, 10000);
+  delay(1000);  
+  moveCarriageToOrigin();
+  delay(1000);
   setClawPos(ServoAngleMin);
-  runMotorTimed(2, 1, 255, 2000);
-  */
+  
 
   buttonSequence = 0;
   
@@ -186,22 +192,21 @@ void setClawPos(int deg){
   for (degDif = abs(degDif); degDif > 0; degDif -= 1) {
     ServoAngle += singleStep;
     clawServo.write(ServoAngle);
-    delay(10);
+    delay(3);
   }
 }
 
 void moveCarriageToOrigin() {
-  int esx = !digitalRead(ESX0);
-  int esy = !digitalRead(ESY0);
-  Serial.println(esx);
-  Serial.println(esy);
+  int esx = !digitalRead(ESX1);
+  int esy = !digitalRead(ESY1);
+  if (esx) moveMotor(0, 255, 2);
+  delay(10);
+  if (esy) moveMotor(1, 255, 2);
   while(esx || esy) {
-    moveMotor(0, esx * 255, 1);
-    moveMotor(1, esy * 255, 1);
-    delay(1);
-    
-    esx = !digitalRead(ESX0);
-    esy = !digitalRead(ESY0);
+    esx = !digitalRead(ESX1);
+    esy = !digitalRead(ESY1);
+    moveMotor(0, esx * 255, 2);
+    moveMotor(1, esy * 255, 2);
   }
 }
 
@@ -212,4 +217,19 @@ void setEndSwitchValues(){
   ESArr[1] = digitalRead(ESX1);
   ESArr[2] = digitalRead(ESY0);
   ESArr[3] = digitalRead(ESY1);
+}
+
+
+void handleSerialRead() {
+  String text = Serial.readStringUntil('\n');
+  if (text.startsWith("up")) {
+    text = text.substring(3, text.length());
+    int value = text.toInt();
+    runMotorTimed(2, 1, 255, value);
+  }
+  else if (text.startsWith("down")) {
+    text = text.substring(5, text.length());
+    int value = text.toInt();
+    runMotorTimed(2, 0, 255, value);
+  }
 }
