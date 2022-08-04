@@ -88,7 +88,7 @@ void loop(){
     }
     
     if(yValue != 0){
-      moveMotor(1, 255, (yValue != 1)); // invert direction so it matches with controls
+      moveMotor(1, 255, abs(yValue-3)); // This is a hack to reverse the directions of movement. The output spectrum of the joystick is reversed for the y-axis, so we have to do this.
     } else {
       moveMotor(1, 0, yValue); 
     }
@@ -101,9 +101,9 @@ void loop(){
   if(currentMillis - previousMillis > interval) {
    previousMillis = currentMillis;
    if(buttonSequence){
-    Serial.println("CANNOT MOVE");
+    //Serial.println("CANNOT MOVE");
    } else {
-    Serial.println("I can move");
+    //Serial.println("I can move");
    }
   }
 }
@@ -116,7 +116,7 @@ void moveMotor(int motor, int speed, int direction){
   else if (motor == 1 && direction == 1) sw = 2;
   else if (motor == 1 && direction == 2) sw = 3;
   // return if switch corresponding to movement direction is pressed.
-  if (sw >= 0 && ESArr[sw]) return;
+  if (sw >= 0 && ESArr[sw]) speed = 0;
 
   
   boolean inPin1 = LOW;
@@ -153,13 +153,15 @@ int mapper(int analogValue){
 }
 
 void runButtonSequence(){
-  runMotorTimed(2, 0, 255, 2000);
+  moveCarriageToOrigin();
+  /*runMotorTimed(2, 0, 255, 2000);
   
   delay(1000); 
   setClawPos(ServoAngleMax);
   delay(1000);
   setClawPos(ServoAngleMin);
   runMotorTimed(2, 1, 255, 2000);
+  */
 
   buttonSequence = 0;
   
@@ -185,6 +187,21 @@ void setClawPos(int deg){
     ServoAngle += singleStep;
     clawServo.write(ServoAngle);
     delay(10);
+  }
+}
+
+void moveCarriageToOrigin() {
+  int esx = !digitalRead(ESX0);
+  int esy = !digitalRead(ESY0);
+  Serial.println(esx);
+  Serial.println(esy);
+  while(esx || esy) {
+    moveMotor(0, esx * 255, 1);
+    moveMotor(1, esy * 255, 1);
+    delay(1);
+    
+    esx = !digitalRead(ESX0);
+    esy = !digitalRead(ESY0);
   }
 }
 
