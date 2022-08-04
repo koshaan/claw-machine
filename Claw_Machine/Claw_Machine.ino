@@ -166,7 +166,7 @@ void runButtonSequence(){
   setClawPos(ServoAngleMax);
   delay(1000);
   while (digitalRead(IR))
-    runMotorTimed(2, 1, 100, 100);
+    runMotorTimed(2, 1, 255, 100);
   delay(1000);  
   moveCarriageToOrigin();
   delay(1000);
