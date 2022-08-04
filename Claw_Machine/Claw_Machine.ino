@@ -86,7 +86,7 @@ void loop(){
     } else {
       moveMotor(0, 0, xValue); 
     }
-    
+
     if(yValue != 0){
       moveMotor(1, 255, abs(yValue-3)); // This is a hack to reverse the directions of movement. The output spectrum of the joystick is reversed for the y-axis, so we have to do this.
     } else {
