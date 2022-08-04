@@ -22,6 +22,9 @@ int PWMZ = 6; //Speed control
 int ZIN1 = 7; //Direction
 int ZIN2 = 5; //Direction
 
+//IR sensor
+int IR = 4;
+
 //Servo Motor
 int ServoPin = 3;
 // Distances for the grabbing sequence:
@@ -55,6 +58,7 @@ void setup(){
   pinMode(ESX1, INPUT_PULLUP);
   pinMode(ESY0, INPUT_PULLUP);
   pinMode(ESY1, INPUT_PULLUP);
+  pinMode(IR, INPUT);
   
 
   clawServo.attach(ServoPin, 600, 2350);
@@ -80,11 +84,11 @@ void loop(){
     buttonSequence = 1;
     runButtonSequence();
   }
-  else if (Serial.available()) {
-    handleSerialRead();
-  }
 
   if(!buttonSequence){
+    if (Serial.available() > 1) {
+      handleSerialRead();
+    }
     if(xValue != 0){
       moveMotor(0, 255, xValue); 
     } else {
@@ -158,11 +162,11 @@ int mapper(int analogValue){
 
 void runButtonSequence(){
   runMotorTimed(2, 0, 255, 10000);
-  
   delay(1000); 
   setClawPos(ServoAngleMax);
   delay(1000);
-  runMotorTimed(2, 1, 255, 10000);
+  while (digitalRead(IR))
+    runMotorTimed(2, 1, 100, 100);
   delay(1000);  
   moveCarriageToOrigin();
   delay(1000);
