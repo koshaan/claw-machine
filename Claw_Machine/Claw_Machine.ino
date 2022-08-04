@@ -28,7 +28,7 @@ int IR = 4;
 //Servo Motor
 int ServoPin = 3;
 // Distances for the grabbing sequence:
-int ServoAngleMax = 145;
+int ServoAngleMax = 150;
 int ServoAngleMin = 10;
 int ServoAngle = 10;
 Servo clawServo;
