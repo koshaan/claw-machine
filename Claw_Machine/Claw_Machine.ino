@@ -162,9 +162,9 @@ int mapper(int analogValue){
 }
 
 void runButtonSequence(){
-  runMotorTimed(2, 0, 255, 3500);
+  runMotorTimed(2, 0, 255, 5000);
   setClawPos(ServoAngleMin);
-  runMotorTimed(2, 0, 255, 2100);
+  runMotorTimed(2, 0, 255, 4000);
   delay(1000);
   setClawPos(ServoAngleMax);
   while (digitalRead(IR))
