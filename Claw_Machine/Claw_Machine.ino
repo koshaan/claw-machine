@@ -28,14 +28,14 @@ int IR = 4;
 //Servo Motor
 int ServoPin = 3;
 // Distances for the grabbing sequence:
-int ServoAngleMax = 150;
-int ServoAngleMin = 10;
-int ServoAngle = 10;
+int ServoAngleMax = 150; // Full Grab
+int ServoAngleMin = 10; // Full Release
+int ServoAngle = ServoAngleMax;
 Servo clawServo;
 
 //End Switch Pins
 #define ESX0 A2
-#define ESX1 A3
+#define ESX1 2
 #define ESY0 A4
 #define ESY1 A5
 
@@ -55,15 +55,18 @@ void setup(){
   Serial.begin(9600) ;
 
   pinMode(ESX0, INPUT_PULLUP);
-  pinMode(ESX1, INPUT_PULLUP);
+  pinMode(2, INPUT_PULLUP);
   pinMode(ESY0, INPUT_PULLUP);
   pinMode(ESY1, INPUT_PULLUP);
   pinMode(IR, INPUT);
-  
 
   clawServo.attach(ServoPin, 600, 2350);
   clawServo.write(ServoAngle);
   button.setDebounceTime(50); // set debounce time to 50 milliseconds
+  runMotorTimed(2,0, 255, 500);
+  while (digitalRead(IR)) {
+    runMotorTimed(2, 1, 255, 100);
+  }
 }
 
 void loop(){
@@ -82,13 +85,15 @@ void loop(){
   if (button.isPressed()) {
     Serial.println("button sequence init");
     buttonSequence = 1;
+    moveMotor(0, 0, 0);
+    moveMotor(1, 0, 0);
     runButtonSequence();
   }
 
   if(!buttonSequence){
-    if (Serial.available() > 1) {
+    /*if (Serial.available() > 1) {
       handleSerialRead();
-    }
+    }*/
     if(xValue != 0){
       moveMotor(0, 255, xValue); 
     } else {
@@ -100,10 +105,6 @@ void loop(){
     } else {
       moveMotor(1, 0, yValue); 
     }
-  } else {
-    // Force both axis to stop
-    moveMotor(0, 0, xValue); 
-    moveMotor(1, 0, yValue); 
   }
   
   if(currentMillis - previousMillis > interval) {
@@ -161,16 +162,19 @@ int mapper(int analogValue){
 }
 
 void runButtonSequence(){
-  runMotorTimed(2, 0, 255, 10000);
-  delay(1000); 
-  setClawPos(ServoAngleMax);
+  runMotorTimed(2, 0, 255, 3500);
+  setClawPos(ServoAngleMin);
+  runMotorTimed(2, 0, 255, 2100);
   delay(1000);
+  setClawPos(ServoAngleMax);
   while (digitalRead(IR))
     runMotorTimed(2, 1, 255, 100);
   delay(1000);  
   moveCarriageToOrigin();
   delay(1000);
   setClawPos(ServoAngleMin);
+  delay(1000);
+  setClawPos(ServoAngleMax);
   
 
   buttonSequence = 0;
