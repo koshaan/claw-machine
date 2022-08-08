@@ -51,6 +51,9 @@ int yValue = 0;
 int bValue = 0;
 int buttonSequence = 0;
 
+int xmax = 4030; // for 9V;
+int ymax = 4350; // for 9V;
+
 void setup(){
   Serial.begin(9600) ;
 
@@ -91,9 +94,9 @@ void loop(){
   }
 
   if(!buttonSequence){
-    /*if (Serial.available() > 1) {
+    if (Serial.available() > 1) {
       handleSerialRead();
-    }*/
+    }
     if(xValue != 0){
       moveMotor(0, 255, xValue); 
     } else {
@@ -162,9 +165,9 @@ int mapper(int analogValue){
 }
 
 void runButtonSequence(){
-  runMotorTimed(2, 0, 255, 5000);
+  runMotorTimed(2, 0, 255, 8000);
   setClawPos(ServoAngleMin);
-  runMotorTimed(2, 0, 255, 4000);
+  runMotorTimed(2, 0, 255, 6000);
   delay(1000);
   setClawPos(ServoAngleMax);
   while (digitalRead(IR))
@@ -190,6 +193,20 @@ void runMotorTimed(int motor, int dir, int speed, int time){
   unsigned int timeToRun = time;
   
   while((endTime - startTime) <= timeToRun){
+    button.loop();
+    moveMotor(motor, speed, dir);
+    endTime = millis();
+  } 
+  moveMotor(motor, 0, 0);
+}
+
+void runSafeXYMotorTimed(int motor, int dir, int speed, int time) {
+  unsigned long startTime = millis();
+  unsigned long endTime = startTime;
+  unsigned int timeToRun = time;
+  while((endTime - startTime) <= timeToRun){
+    setEndSwitchValues();
+    if (ESArr[motor*2 + !(dir%2)]) break;
     button.loop();
     moveMotor(motor, speed, dir);
     endTime = millis();
@@ -231,16 +248,48 @@ void setEndSwitchValues(){
 }
 
 
+// Test to ensure machine can handle many consecutive plays without breaking.
+void correctnessTest(int rounds){
+  moveCarriageToOrigin();
+  for (int i = 0; i < rounds; i++) {
+    int xval = random(0, xmax);
+    int yval = random(0, ymax);
+    runSafeXYMotorTimed(0, 1, 255, xval);
+    runSafeXYMotorTimed(1, 1, 255, yval);
+    runButtonSequence();
+  }
+}
+
+
+// Test to ensure that movement back and forth returns motor to same position
+void repeatabilityTest(int rounds) {
+  for (int i = 0; i < rounds; i++) {
+    runSafeXYMotorTimed(0, 1, 255, 1000);
+    runSafeXYMotorTimed(1, 1, 255, 1000);
+    runSafeXYMotorTimed(0, 0, 255, 1000);
+    runSafeXYMotorTimed(1, 0, 255, 1000);
+  }
+}
+
+
 void handleSerialRead() {
   String text = Serial.readStringUntil('\n');
-  if (text.startsWith("up")) {
-    text = text.substring(3, text.length());
-    int value = text.toInt();
-    runMotorTimed(2, 1, 255, value);
-  }
-  else if (text.startsWith("down")) {
-    text = text.substring(5, text.length());
-    int value = text.toInt();
-    runMotorTimed(2, 0, 255, value);
-  }
+  if (text.startsWith("up"))
+    runMotorTimed(2, 1, 255, text.substring(3, text.length()).toInt());
+  else if (text.startsWith("down"))
+    runMotorTimed(2, 0, 255, text.substring(5, text.length()).toInt());
+  else if (text.startsWith("x-"))
+    runSafeXYMotorTimed(0, 0, 255, text.substring(3, text.length()).toInt());
+  else if (text.startsWith("x+"))
+    runSafeXYMotorTimed(0, 1, 255, text.substring(3, text.length()).toInt());
+  else if (text.startsWith("y-"))
+    runSafeXYMotorTimed(1, 0, 255, text.substring(3, text.length()).toInt());
+  else if (text.startsWith("y+"))
+    runSafeXYMotorTimed(1, 1, 255, text.substring(3, text.length()).toInt());
+  else if (text.startsWith("origin"))
+    moveCarriageToOrigin();
+  else if (text.startsWith("testcorrectness"))
+    correctnessTest(text.substring(16, text.length()).toInt());
+  else if (text.startsWith("testrepeatability"))
+    repeatabilityTest(text.substring(18, text.length()).toInt());
 }
